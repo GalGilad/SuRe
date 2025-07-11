@@ -1,4 +1,4 @@
-For the script to work correctly, your data should be organized in a subdirectory inside the data/ folder (e.g., data/brca/). This directory must contain:
+For the script to work correctly, the data should be organized in a subdirectory inside the data/ folder (e.g., data/brca/). This directory must contain:
 
 mutation_counts.csv: A CSV file where columns are sample IDs and rows are the 96 mutation categories.
 
