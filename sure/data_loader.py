@@ -157,7 +157,7 @@ class MutationDataset(Dataset):
         relative_exposures = exposures / total_exposures if total_exposures > 0 else np.zeros_like(exposures)
 
         total_mutations = int(np.sum(full_counts))
-        use_full_sample = self.is_train and (random.random() < 0.1 or total_mutations <= 1)
+        use_full_sample = self.is_train and (random.random() < 0.2 or total_mutations <= 1)
 
         if use_full_sample:
             counts = full_counts

@@ -10,7 +10,8 @@ import torch.nn.functional as F
 class ExpertModule(nn.Module):
     """
     Represents an individual expert network in the Mixture-of-Experts model.
-    Each expert is a multi-layer perceptron that specializes in a subset of the data.
+    Each expert is a multi-layer perceptron that specializes in a subset of the data
+    and outputs a probability distribution over the signatures.
     """
 
     def __init__(self, input_size, output_size, hidden_size, dropout_rate):
@@ -26,7 +27,9 @@ class ExpertModule(nn.Module):
         x = self.dropout(self.relu(self.fc1(x)))
         x = self.dropout(self.relu(self.fc2(x)))
         x = self.dropout(self.relu(self.fc3(x)))
-        return self.output(x)
+        x = self.output(x)
+        # Apply softmax to the expert's output to produce a probability distribution.
+        return F.softmax(x, dim=1)
 
 
 class GatingNetwork(nn.Module):
@@ -44,7 +47,7 @@ class GatingNetwork(nn.Module):
 
     def forward(self, x):
         x = self.dropout(self.relu(self.fc1(x)))
-        # Use softmax to get a probability distribution over the experts
+        # Use softmax to get a probability distribution over the experts.
         return F.softmax(self.output(x), dim=1)
 
 
@@ -62,18 +65,18 @@ class SuReNet(nn.Module):
         self.num_categories = 96  # Standard number of mutation categories
         self.input_size = self.num_categories + self.num_traits
 
-        # A preliminary layer to process the concatenated input
+        # A preliminary layer to process the concatenated input.
         self.input_transform = nn.Linear(self.input_size, self.input_size)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=dropout_rate)
 
-        # A list of expert modules
+        # A list of expert modules.
         self.experts = nn.ModuleList(
             [ExpertModule(self.input_size, self.num_signatures, hidden_units, dropout_rate)
              for _ in range(num_experts)]
         )
 
-        # The gating network
+        # The gating network.
         self.gating_network = GatingNetwork(self.input_size, num_experts, hidden_units, dropout_rate)
 
     def forward(self, mutation_counts, trait_vectors):
@@ -87,25 +90,23 @@ class SuReNet(nn.Module):
         Returns:
             torch.Tensor: The final predicted relative exposures.
         """
-        # Concatenate mutation counts and trait vectors to form the input
+        # Concatenate mutation counts and trait vectors to form the input.
         x = torch.cat((mutation_counts, trait_vectors), dim=1)
 
-        # Initial transformation of the combined input
+        # Initial transformation of the combined input.
         transformed_x = self.dropout(self.relu(self.input_transform(x)))
 
-        # Get the weights for each expert from the gating network
-        gate_weights = self.gating_network(transformed_x)  # Shape: (batch_size, num_experts)
+        # Get the weights for each expert from the gating network.
+        gate_weights = self.gating_network(transformed_x)
 
-        # Get the outputs from each expert module
+        # Get the outputs (which are already probabilities) from each expert module.
         expert_outputs = [expert(transformed_x) for expert in self.experts]
-        expert_outputs_stacked = torch.stack(expert_outputs, dim=1)  # Shape: (batch_size, num_experts, num_signatures)
+        expert_outputs_stacked = torch.stack(expert_outputs, dim=1)
 
-        # Weight the expert outputs using the gate weights
-        # Unsqueeze gate_weights to (batch_size, num_experts, 1) for broadcasting
+        # Weight the expert outputs using the gate weights.
         weighted_expert_outputs = expert_outputs_stacked * gate_weights.unsqueeze(-1)
 
-        # Sum the weighted outputs to get the final combined result
-        combined_output = torch.sum(weighted_expert_outputs, dim=1)  # Shape: (batch_size, num_signatures)
+        # Sum the weighted probability distributions to get the final result.
+        final_prediction = torch.sum(weighted_expert_outputs, dim=1)
 
-        # Apply softmax to the final output to produce a probability distribution
-        return F.softmax(combined_output, dim=1)
+        return final_prediction
