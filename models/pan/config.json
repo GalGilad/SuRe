@@ -1,0 +1,6 @@
+{
+    "num_signatures": 58,
+    "num_traits": 14,
+    "num_experts": 8,
+    "hidden_units": 100
+}
