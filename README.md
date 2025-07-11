@@ -10,11 +10,12 @@
 │   └── pan/
 │       ├── ...
 ├── models/
-│   └── brca/
-│       ├── best_model.pth
-│       ├── config.json
-│       └── trait_map.json
-│
+│   ├── brca/
+│   │   ├── best_model.pth
+│   │   ├── config.json
+│   │   └── trait_map.json
+│   └── pan/
+│       ├── ...
 ├── sure/
 │   ├── __init__.py
 │   ├── __main__.py        # Main CLI entry point
