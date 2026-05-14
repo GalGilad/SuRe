@@ -1,66 +1,72 @@
 ## Project Structure
 
 ```
-/SuRe/
-├── data/
-│   ├── brca/
-│   │   ├── mutation_counts.csv
-│   │   ├── exposures.csv
-│   │   └── sample_to_trait.pickle  (Optional)
-│   └── pan/
-│       ├── ...
-├── models/
-│   ├── brca/
-│   │   ├── best_model.pth
-│   │   ├── config.json
-│   │   └── trait_map.json
-│   └── pan/
-│       ├── ...
-├── sure/
-│   ├── __init__.py
-│   ├── __main__.py        # Main CLI entry point
-│   ├── model.py           # SuRe neural network architecture
-│   ├── data_loader.py     # Data loading
-│   ├── train.py           # Training logic
-│   └── infer.py           # Inference logic
+SuRe/
 │
-└── requirements.txt
-```
+├── main.py                  # The single CLI entry point for all commands
+├── requirements.txt         
+├── README.md                
+│
+├── sure/                    # Core Python package
+│   ├── __init__.py          
+│   ├── model.py             
+│   ├── data_loader.py       
+│   ├── train.py             
+│   ├── evaluate.py          
+│   └── infer.py             
+│
+├── data/                    
+│   ├── brca/                # Breast cancer dataset (contains /train, /val, /test)
+│   └── pan/                 # Pan-cancer dataset (contains /train, /val, /test)
+│
+├── models/                  # Saved models and configurations
+│   ├── brca/                # BRCA model (best_model.pth, config.json, trait_map.json)
+│   └── pan/                 # Pan-cancer model (best_model.pth, config.json, trait_map.json)
+│
+└── results/                 # Auto-generated outputs
 
 ## Data Directory Setup
 
-For the script to work correctly, the data should be organized in a subdirectory inside the `data/` folder (e.g., `data/brca/`). This directory must contain:
-* `mutation_counts.csv`: A CSV file where columns are sample IDs and rows are the 96 mutation categories.
-* `exposures.csv`: A CSV file with the ground-truth exposures. Columns are sample IDs and rows are signature names.
+For the training script to work correctly, the data must be organized into train and val subdirectories inside your main data folder (e.g., data/brca/train/ and data/brca/val/).
+
+Each of these subdirectories must contain:
+
+mutation_counts.csv: A CSV file where columns are sample IDs and rows are the 96 mutation categories.
+
+exposures.csv: A CSV file with the ground-truth exposures. Columns are sample IDs and rows are signature names.
 
 It can optionally contain:
-* `sample_to_trait.pickle`: A Python pickle file containing a dictionary that maps sample IDs to their corresponding trait (e.g., cancer type). If this file is not present, the script will assume all samples belong to a single trait.
+
+sample_to_trait.pickle: A Python pickle file containing a dictionary mapping sample IDs to their corresponding trait (e.g., cancer tissue type). If absent, the script assumes all samples belong to a single default trait.
+
 
 ## Usage
 
-The project is run via a command-line interface.
+The project is run via a single command-line interface: main.py.
 
-### Training a Model
+1. Evaluating a Pre-Trained Model
+The evaluate command assesses a trained model's performance across varying levels of data sparsity (m = 300, 100, 30, 10, 6, 3 mutations per sample).
 
-The `train` command trains a new model. It automatically infers the number of signatures and traits from your data files.
+Example Command (BRCA):
 
-**Example Command:**
-```bash
-python -m sure train --data_dir data/brca --num_experts 4 --hidden_units 100 --epochs 100 --batch_size 32 --learning_rate 0.1 --dropout_rate 0.2
-```
+Bash
+python main.py evaluate --data_dir data/brca/test --model_path models/brca/best_model.pth
+Outputs: Saves an evaluation metrics CSV and a performance summary plot to results/brca/ (or the respective dataset folder).
 
-This command will:
-* Load data from the `data/brca` directory.
-* Train a model.
-* Save the best model (`best_model.pth`), its configuration (`config.json`), and the trait mapping (`trait_map.json`) to the `models/brca/` directory.
-* Save a plot of the training and validation loss (`loss_curve.png`) to the `results/brca/` directory.
+2. Training a Model
+The train command trains a new model. It automatically infers the number of signatures and traits from your data files.
 
-### Running Inference
+Example Command (Pan-Cancer):
 
-The `infer` command uses a trained model to predict exposures for new data. It automatically loads the model's architecture from the saved configuration files.
+Bash
+python main.py train --data_dir data/pan --num_experts 8 --hidden_units 500
+Outputs: Trains the model and saves best_model.pth, config.json, and trait_map.json to the models/pan/ directory. It also saves a loss_curve.png to the results/pan/ directory.
 
-**Example Command:**
-```bash
-python -m sure infer --model_path models/brca/best_model.pth --mutation_counts_path data/brca/new_unseen_counts.csv --trait_path data/brca/new_unseen_traits.pickle --output_file results/brca/predicted_exposures.csv
-```
-* The `--trait_path` is optional. If not provided, the script will assume all samples belong to a single trait.
+3. Running Inference on New Data
+The infer command uses a trained model to predict exposures for new, unseen mutation data. It automatically loads the model's architecture from the saved configuration files.
+
+Example Command:
+
+Bash
+python main.py infer --model_path models/brca/best_model.pth --mutation_counts_path path/to/mutation_counts.csv --output_file inferred_exposures.csv
+Optional Trait Mapping: If your inference data spans multiple cancer types, pass the pickle map using --trait_path path/to/sample_to_trait.pickle. If omitted, the script assumes a single default trait.
