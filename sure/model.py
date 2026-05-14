@@ -110,35 +110,3 @@ class SuReNet(nn.Module):
         final_prediction = torch.sum(weighted_expert_outputs, dim=1)
 
         return final_prediction
-
-
-class StandardFCN(nn.Module):
-    """
-    A standard Fully Connected Network (FCN) for the ablation study,
-    with a parameter count comparable to the MoE model.
-    """
-
-    def __init__(self, num_signatures, num_traits, hidden_units=250, dropout_rate=0.25):
-        super(StandardFCN, self).__init__()
-        self.input_size = 96 + num_traits
-
-        self.fc1 = nn.Linear(self.input_size, hidden_units)
-        self.fc2 = nn.Linear(hidden_units, hidden_units)
-        self.fc3 = nn.Linear(hidden_units, hidden_units)
-        self.output = nn.Linear(hidden_units, num_signatures)
-
-        self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(p=dropout_rate)
-
-    def forward(self, mutation_counts, trait_vectors):
-        # Concatenate inputs
-        x = torch.cat((mutation_counts, trait_vectors), dim=1)
-
-        # Pass through the network
-        x = self.dropout(self.relu(self.fc1(x)))
-        x = self.dropout(self.relu(self.fc2(x)))
-        x = self.dropout(self.relu(self.fc3(x)))
-        x = self.output(x)
-
-        # Apply softmax to get the final probability distribution
-        return F.softmax(x, dim=1)

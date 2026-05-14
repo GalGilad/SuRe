@@ -1,7 +1,6 @@
 # sure/infer.py
 # This script runs inference using a trained SuRe model to predict mutational
-# signature exposures for new data. It loads the model, its configuration,
-# and the trait mapping to ensure consistent and accurate predictions.
+# signature exposures for new data.
 
 import os
 import torch
